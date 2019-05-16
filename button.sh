@@ -4,6 +4,8 @@
 while getopts ":au:Nzs" opt; do
     case ${opt} in
         u)
+            apt update
+            apt -y install sudo
             usermod -aG sudo $OPTARG
         ;;
         N)
@@ -32,6 +34,7 @@ while getopts ":au:Nzs" opt; do
             apt -y upgrade
         ;;
         s)
+            apt -y install openssh-client
             apt -y install openssh-server
             sed -i 's/.\{0,1\}PasswordAuthentication.\{0,5\}$/PasswordAuthentication no/' /etc/ssh/sshd_config
             systemctl restart sshd
@@ -43,7 +46,9 @@ while getopts ":au:Nzs" opt; do
             chsh -s /bin/zsh
         ;;
         \?)
-            echo "use -u to specify the user you want to add to sudoers\nuse -N to make the sudoers not requiring password\nuse -a to do apt install" 1>&2
+            echo "use -u to specify the user you want to add to sudoers" 1>&2
+            echo "use -N to make the sudoers not requiring password" 1>&2
+            echo "use -a to do apt install" 1>&2
             exit 1
         ;;
         :)

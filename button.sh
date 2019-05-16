@@ -4,7 +4,11 @@
 while getopts ":au:Nzsh" opt; do
     case ${opt} in
 	h)
-	    echo "-u: usermod\n-N: sudoer nopasswd\n-a: apt\n-s: openssh server\n-z: zsh"
+	    echo "-u: usermod"
+	    echo "-N: sudoer nopasswd"
+	    echo "-a: apt"
+	    echo "-s: openssh server"
+	    echo "-z: zsh"
 	;;
         u)
             apt update

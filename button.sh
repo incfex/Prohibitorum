@@ -1,8 +1,11 @@
 #!/bin/bash
 
 # Processing options
-while getopts ":au:Nzs" opt; do
+while getopts ":au:Nzsh" opt; do
     case ${opt} in
+	h)
+	    echo "-u: usermod\n-N: sudoer nopasswd\n-a: apt\n-s: openssh server\n-z: zsh"
+	;;
         u)
             apt update
             apt -y install sudo

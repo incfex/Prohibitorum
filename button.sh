@@ -17,6 +17,7 @@ while getopts ":au:Nzsh" opt; do
             apt -y install sudo
             apt -y install zsh
             apt -y install build-essential
+	    apt -y install net-tools
             apt -y install vim
             apt -y install gcc
             apt -y install gdb

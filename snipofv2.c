@@ -178,7 +178,7 @@ int main(){
     pcap_t *handle;
     char errbuf[PCAP_ERRBUF_SIZE];
     struct bpf_program fp;
-    char filter_exp[] = "tcp and dst host 10.0.2.15";
+    char filter_exp[] = "tcp and src host 10.0.2.15";
     bpf_u_int32 net;
 
     sock = socket(PF_INET, SOCK_RAW, IPPROTO_TCP);

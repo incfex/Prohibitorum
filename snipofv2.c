@@ -7,6 +7,11 @@
 #include <netinet/if_ether.h>
 #include <arpa/inet.h>
 #include <pcap.h>
+#include <errno.h>
+#include <unistd.h>
+
+//Create RAW socket
+int sock;
 
 struct pseudo_hdr
 {
@@ -55,19 +60,25 @@ uint16_t tcpCS(const struct iphdr *iph, const struct tcphdr *tcph, uint16_t tcp_
 }
 
 int tcpPacket(struct iphdr *_iph){
-    struct tcphdr *_tcph = (struct tcphdr*) (_iph + sizeof(struct iphdr));
+
+    struct tcphdr *_tcph = (struct tcphdr*) (((uint8_t *) _iph) + _iph->ihl*4);
     //Setting the address and variables
-    uint16_t src_port = _iph->daddr;
-    uint16_t dst_port = _iph->saddr;
+    u_int16_t src_port = _tcph->dest;
+    u_int16_t dst_port = _tcph->source;
     uint32_t src_addr = _iph->daddr;
     uint32_t dst_addr = _iph->saddr;
     uint32_t seq = _tcph->ack_seq;
-    uint32_t ack = _tcph->seq;
+    uint32_t ack = _tcph->seq+1;
+
+    //Read the target ip addr, and print out for double check
+    char ip_str[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(_iph->daddr), ip_str, INET_ADDRSTRLEN);
+    printf("dest=%s", ip_str);
+    printf(":%u", ntohs(_tcph->dest));
 
     struct sockaddr_in sin;
     struct pseudo_hdr psh;
-    //Create RAW socket
-    int sock = socket(PF_INET, SOCK_RAW, IPPROTO_TCP);
+    
     //Define a new packet based on common MTU
     char *packet = malloc(1500);
     struct iphdr *iph = (struct iphdr*) packet;
@@ -111,35 +122,51 @@ int tcpPacket(struct iphdr *_iph){
     tcph->syn = 0; /* This is synchronization packet */
     tcph->rst = 1; /* This is reset packet */
     tcph->psh = 0;
-    tcph->ack = 0;
+    tcph->ack = 1;
     tcph->urg = 0;
-    tcph->window = htons(10);
-    tcph->check = 0; 
+    tcph->window = htons(3660);
     tcph->urg_ptr = 0;
     //Calculate the TCP checksum
+    tcph->check = 0; 
     tcph->check = tcpCS(iph, tcph, 20);
 
     //Tell kernel that we construct the header
     int _one = 1;
     const int *one = &_one;
     if(setsockopt(sock, IPPROTO_IP, IP_HDRINCL, one, sizeof(_one)) < 0){
-        printf("Error setting socket");
+        printf("Error setting socket! Error number : %d . Error message : %s \n", errno, strerror(errno));
         exit(0);
     }
 
     //Send out the packet
+    for(int i=0;i<3;i++){
+        if(sendto(sock, packet, iph->tot_len, 0, (struct sockaddr *)&sin, sizeof(sin)) < 0){
+            printf("Error sending packet\n");
+        }
+        else{
+            printf(".");
+        }
+    }
+
+    tcph->ack = 0;
+    tcph->window = htons(5218);
+    tcph->ack_seq = 0;
+    tcph->check = 0;
+    tcph->check = tcpCS(iph, tcph, 20);
+    
     if(sendto(sock, packet, iph->tot_len, 0, (struct sockaddr *)&sin, sizeof(sin)) < 0){
         printf("Error sending packet\n");
     }
     else{
-        printf("Packet Sent!\n");
+        printf(".\n");
     }
+    
 
     return 1;
 }
 
 void gPacket(u_char *args, const struct pcap_pkthdr *header, const u_char *packet){
-    printf("Received Packet!");
+    //printf("Received Packet!");
 
     struct ether_header *eth = (struct ether_header *)packet;
     struct iphdr *iph = (struct iphdr*) (packet + sizeof(struct ether_header));
@@ -151,8 +178,13 @@ int main(){
     pcap_t *handle;
     char errbuf[PCAP_ERRBUF_SIZE];
     struct bpf_program fp;
-    char filter_exp[] = "tcp and src host 10.0.2.15";
+    char filter_exp[] = "tcp and dst host 10.0.2.15";
     bpf_u_int32 net;
+
+    sock = socket(PF_INET, SOCK_RAW, IPPROTO_TCP);
+    if(sock <= 0){
+        printf("Error init socket!");
+    }
 
     // Step 1: Open live pcap session on NIC with interface name
 	handle = pcap_open_live("enp0s3", BUFSIZ, 1, 1000, errbuf);
@@ -165,5 +197,6 @@ int main(){
 	pcap_loop(handle, -1, gPacket, NULL);
 
     pcap_close(handle); //Close the handle 
+    close(sock);
 	return 0;
 }

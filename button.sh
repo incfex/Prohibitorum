@@ -39,6 +39,7 @@ while getopts ":au:Nzsh" opt; do
             apt -y install brctl
             apt -y install isc-dhcp-client
             apt -y install isc-dhcp-server
+	    apt -y install mtr-tiny
             apt -y upgrade
         ;;
         s)

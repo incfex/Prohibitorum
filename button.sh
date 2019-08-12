@@ -21,26 +21,10 @@ while getopts ":au:Nzsh" opt; do
         ;;
         a)
             apt update
-            apt -y install sudo
-            apt -y install zsh
-            apt -y install build-essential
-	    apt -y install net-tools
-            apt -y install vim
-            apt -y install gcc
-            apt -y install gdb
-            apt -y install python
-            apt -y install python3
-            apt -y install nginx
-            
-            apt -y install curl
-            apt -y install g++
-            apt -y install htop
-            apt -y install tree
-            apt -y install git
-            apt -y install brctl
-            apt -y install isc-dhcp-client
-            apt -y install isc-dhcp-server
-	    apt -y install mtr-tiny
+            apt -y install sudo zsh build-essential net-tools vim gcc gdb g++ python python3 curl wget htop tree git bridge-utils mtr-tiny
+            #apt -y install nginx
+            #apt -y install isc-dhcp-client
+            #apt -y install isc-dhcp-server
             apt -y upgrade
         ;;
         s)

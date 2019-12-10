@@ -22,7 +22,7 @@ while getopts ":au:Nzsh" opt; do
         ;;
         a)
             apt update
-            apt -y install sudo zsh build-essential net-tools vim gcc gdb g++ python python3 curl wget htop tree git bridge-utils mtr-tiny
+            apt -y install sudo zsh build-essential net-tools vim gcc gdb g++ python python3 curl wget htop tree git bridge-utils mtr-tiny tmux
             #apt -y install nginx
             #apt -y install isc-dhcp-client
             #apt -y install isc-dhcp-server

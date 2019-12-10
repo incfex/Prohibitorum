@@ -15,6 +15,7 @@ while getopts ":au:Nzsh" opt; do
             apt -y install sudo
             usermod -aG sudo $OPTARG
 	    sed -i '1 a\Defaults        insults' /etc/sudoers
+	    chsh -s /bin/zsh $OPTARG
         ;;
         N)
             sed -i 's/%sudo	ALL=(ALL:ALL) ALL/%sudo ALL=(ALL:ALL) NOPASSWD:ALL/' /etc/sudoers
